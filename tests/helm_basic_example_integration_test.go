@@ -46,10 +46,12 @@ func TestHelmBasicExampleDeployment(t *testing.T) {
 	pkubectlOptions := &k8s.KubectlOptions{
 		Namespace: namespaceName,
 	}
+	// randomnPort on host, used for port forward
+	randomnPort := k8s.GetAvailablePort(t)
+	// Endpoint to access the service
+	endpoint := "localhost"
 
 	kubeResourceT := k8s.ResourceTypeService
-
-	// randomPort := rand.Int()
 
 	k8s.CreateNamespace(t, kubectlOptions, namespaceName)
 	// ... and make sure to delete the namespace at the end of the test
@@ -97,22 +99,18 @@ func TestHelmBasicExampleDeployment(t *testing.T) {
 	tlsConfig := tls.Config{}
 
 	// Sleep for 2 seconds to allow pod to be setup
-	time.Sleep(30 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	// Create tunnel object
-	testTunnel := k8s.NewTunnel(pkubectlOptions, kubeResourceT, serviceName, 8080, 80)
+	testTunnel := k8s.NewTunnel(pkubectlOptions, kubeResourceT, serviceName, randomnPort, 80)
 
 	// Portforward service
 	testTunnel.ForwardPort(t)
-
-	// Endpoint to access the service
-	endpoint := "localhost:8080"
-
 	// Test the endpoint for up to 5 minutes. This will only fail if we timeout waiting for the service to return a 200
 	// response.
 	http_helper.HttpGetWithRetryWithCustomValidation(
 		t,
-		fmt.Sprintf("http://%s", endpoint),
+		fmt.Sprintf("http://%s:%d", endpoint, randomnPort),
 		&tlsConfig,
 		30,
 		10*time.Second,

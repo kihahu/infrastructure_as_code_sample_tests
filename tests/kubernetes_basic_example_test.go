@@ -43,6 +43,10 @@ func TestKubernetesBasicExample(t *testing.T) {
 	// - Random namespace
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 	kubeResourceT := k8s.ResourceTypeService
+	// randomnPort on host, used for port forward
+	randomnPort := k8s.GetAvailablePort(t)
+	// Endpoint to access the service
+	endpoint := "localhost"
 
 	k8s.CreateNamespace(t, options, namespaceName)
 	// website::tag::5::Make sure to delete the namespace at the end of the test
@@ -71,19 +75,16 @@ func TestKubernetesBasicExample(t *testing.T) {
 	time.Sleep(10 * time.Second)
 
 	// Create tunnel object
-	testTunnel := k8s.NewTunnel(options, kubeResourceT, "nginx-service", 8080, 80)
+	testTunnel := k8s.NewTunnel(options, kubeResourceT, "nginx-service", randomnPort, 80)
 
 	// Portforward service
 	testTunnel.ForwardPort(t)
-
-	// Endpoint to access the service
-	endpoint := "localhost:8080"
 
 	// Test the endpoint for up to 5 minutes. This will only fail if we timeout waiting for the service to return a 200
 	// response.
 	http_helper.HttpGetWithRetryWithCustomValidation(
 		t,
-		fmt.Sprintf("http://%s", endpoint),
+		fmt.Sprintf("http://%s:%d", endpoint, randomnPort),
 		&tlsConfig,
 		30,
 		10*time.Second,

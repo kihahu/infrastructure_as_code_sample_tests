@@ -1,3 +1,5 @@
+// +build terraform aws
+
 package test
 
 import (
